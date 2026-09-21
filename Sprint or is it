@@ -1,0 +1,122 @@
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+
+player.CharacterAdded:Connect(function(newChar)
+	character = newChar
+	humanoid = newChar:WaitForChild("Humanoid")
+end)
+
+local sprintSpeed = 5
+local isSprinting = false
+
+-- Sistema de estamina (duração máxima e recuperação)
+local maxStamina = 5
+local currentStamina = 5
+
+-- Criação do ScreenGui no CoreGui para o exploit
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "DoorsSprintGui_Exact"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = CoreGui 
+
+-- 1. BARRA LARANJA (Base inferior com BorderSizePixel = 2)
+local bottomBar = Instance.new("Frame")
+bottomBar.Name = "BottomBar"
+bottomBar.Size = UDim2.new(0, 208, 0, 44)
+bottomBar.Position = UDim2.new(0.774, 0, 0.453, 0)
+bottomBar.BackgroundColor3 = Color3.fromRGB(255, 116, 3)
+bottomBar.BorderColor3 = Color3.fromRGB(0, 0, 0)
+bottomBar.BorderSizePixel = 2
+bottomBar.Parent = screenGui
+
+-- 2. BARRA DE SPRINT AMARELA (A que diminui quando corre, Border 0)
+local sprintBar = Instance.new("Frame")
+sprintBar.Name = "SprintBar"
+sprintBar.Size = UDim2.new(0, 208, 0, 44)
+sprintBar.Position = UDim2.new(-0.0, 0, -0.001, 0)
+sprintBar.BackgroundColor3 = Color3.fromRGB(255, 231, 137)
+sprintBar.BorderSizePixel = 0
+sprintBar.Parent = bottomBar 
+
+-- 3. BOTÃO DE SPRINT (Texto tamanho 14 e Negrito)
+local sprintButton = Instance.new("TextButton")
+sprintButton.Name = "sprint"
+sprintButton.Size = UDim2.new(0, 145, 0, 50)
+sprintButton.Position = UDim2.new(0.84, 0, 0.349, 0)
+sprintButton.BackgroundColor3 = Color3.fromRGB(255, 231, 137)
+sprintButton.BorderColor3 = Color3.fromRGB(0, 0, 0)
+sprintButton.BorderSizePixel = 2
+sprintButton.Text = "SPRINT"
+sprintButton.TextColor3 = Color3.fromRGB(0, 0, 0)
+sprintButton.TextSize = 14
+sprintButton.Font = Enum.Font.SourceSansBold
+sprintButton.Parent = screenGui
+
+-- === LÓGICA DO SPRINT E DA BARRA ===
+
+local function toggleSprint()
+	-- Se a estamina acabou, não deixa ligar
+	if not isSprinting and currentStamina <= 0 then return end
+	
+	isSprinting = not isSprinting
+	
+	if humanoid then
+		if isSprinting then
+			humanoid.WalkSpeed = sprintSpeed
+			sprintButton.BackgroundColor3 = Color3.fromRGB(210, 190, 110)
+		else
+			humanoid.WalkSpeed = 16
+			sprintButton.BackgroundColor3 = Color3.fromRGB(255, 231, 137)
+		end
+	end
+end
+
+-- Loop para atualizar a barra e a estamina em tempo real
+RunService.RenderStepped:Connect(function(dt)
+	if isSprinting then
+		currentStamina = math.clamp(currentStamina - dt, 0, maxStamina)
+		if currentStamina <= 0 then
+			isSprinting = false
+			if humanoid then humanoid.WalkSpeed = 16 end
+			sprintButton.BackgroundColor3 = Color3.fromRGB(255, 231, 137)
+		end
+	else
+		currentStamina = math.clamp(currentStamina + (dt * 0.7), 0, maxStamina)
+	end
+	
+	local scale = currentStamina / maxStamina
+	sprintBar.Size = UDim2.new(scale, 0, 0, 44)
+end)
+
+-- Controles para PC (Tecla Q segura para correr e solta para parar)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed then return end
+	if input.KeyCode == Enum.KeyCode.Q then
+		if not isSprinting and currentStamina > 0 then
+			isSprinting = true
+			if humanoid then humanoid.WalkSpeed = sprintSpeed end
+			sprintButton.BackgroundColor3 = Color3.fromRGB(210, 190, 110)
+		end
+	end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+	if input.KeyCode == Enum.KeyCode.Q then
+		if isSprinting then
+			isSprinting = false
+			if humanoid then humanoid.WalkSpeed = 16 end
+			sprintButton.BackgroundColor3 = Color3.fromRGB(255, 231, 137)
+		end
+	end
+end)
+
+-- Controles para Mobile (Clica para ligar, clica de novo para desligar)
+sprintButton.MouseButton1Click:Connect(function()
+	toggleSprint()
+end)
