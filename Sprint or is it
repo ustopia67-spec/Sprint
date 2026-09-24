@@ -12,7 +12,7 @@ player.CharacterAdded:Connect(function(newChar)
 	humanoid = newChar:WaitForChild("Humanoid")
 end)
 
-local sprintSpeed = 1
+local sprintSpeed = 5
 local isSprinting = false
 
 -- Sistema de estamina (duração máxima e recuperação)
